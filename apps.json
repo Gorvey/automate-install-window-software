@@ -1,0 +1,15 @@
+{
+  "wingetApps": [
+    {
+      "name": "Git",
+      "id": "Git.Git",
+      "options": "--silent --scope machine"
+    },
+    {
+      "name": "uTools",
+      "id": "Yuanli.uTools"
+    }
+  ],
+  "installerApps": [],
+  "portableApps": []
+}
