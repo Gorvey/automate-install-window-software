@@ -3,21 +3,25 @@
     {
       "name": "Git",
       "id": "Git.Git"
-    }
-  ],
-  "installerApps": [
+    },
     {
-      "name": "httrack",
-      "path":"httrack_x64-3.49.2.exe",
-      "silent": true,
-      "ignoreInstall":false
+      "name": "WindowsTerminal",
+      "id": "Microsoft.WindowsTerminal"
     },
     {
       "name": "uTools",
-      "url":"https://open.u-tools.cn/download/uTools-7.2.1.exe",
-      "silent": true,
-      "ignoreInstall":true
+      "id": "Yuanli.uTools"
+    },
+    {
+      "name": "Notion",
+      "id": "Notion.Notion"
+    },
+    {
+      "name": "WeixinDevTools",
+      "id": "Tencent.WeixinDevTools"
     }
+  ],
+  "installerApps": [
   ],
   "portableApps": [
     {
@@ -25,7 +29,6 @@
       "path":"portable/Cheat Engine 7.6.zip",
       "type":"zip",
       "ignoreInstall":true
-
     }
   ]
 }

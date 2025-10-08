@@ -126,7 +126,44 @@ function Install-InstallerApp {
     try {
         $installerPath = ""
         
-        if ($Path) {
+        # 优先使用 URL
+        if ($Url) {
+            # 从URL下载
+            Write-LogMessage "INFO" "检测到 URL，优先使用在线下载: $Url"
+            
+            # 确保下载目录存在
+            if (-not (Test-Path $DownloadDir)) {
+                New-Item -ItemType Directory -Path $DownloadDir -Force | Out-Null
+            }
+            
+            # 从 URL 获取文件扩展名
+            $urlFileName = [System.IO.Path]::GetFileName($Url)
+            $extension = [System.IO.Path]::GetExtension($urlFileName)
+            
+            # 使用 name.type 格式命名
+            $fileName = "$Name$extension"
+            $installerPath = Join-Path $DownloadDir $fileName
+            
+            # 检查是否已经下载
+            if (Test-Path $installerPath) {
+                Write-LogMessage "SUCCESS" "发现已下载的文件，直接使用: $installerPath"
+            }
+            else {
+                Write-LogMessage "INFO" "开始下载 $Name 从 $Url"
+                
+                try {
+                    # 使用 WebClient 下载
+                    $webClient = New-Object System.Net.WebClient
+                    $webClient.DownloadFile($Url, $installerPath)
+                    Write-LogMessage "SUCCESS" "下载完成: $installerPath"
+                }
+                catch {
+                    Write-LogMessage "ERROR" "下载失败: $_"
+                    return $false
+                }
+            }
+        }
+        elseif ($Path) {
             # 使用本地路径
             $installerPath = Join-Path $PSScriptRoot "..\installer\$Path"
             if (-not (Test-Path $installerPath)) {
@@ -134,29 +171,6 @@ function Install-InstallerApp {
                 return $false
             }
             Write-LogMessage "INFO" "使用本地安装包: $installerPath"
-        }
-        elseif ($Url) {
-            # 从URL下载
-            Write-LogMessage "INFO" "开始下载 $Name 从 $Url"
-            
-            # 确保下载目录存在
-            if (-not (Test-Path $DownloadDir)) {
-                New-Item -ItemType Directory -Path $DownloadDir -Force | Out-Null
-            }
-            
-            $fileName = [System.IO.Path]::GetFileName($Url)
-            $installerPath = Join-Path $DownloadDir $fileName
-            
-            try {
-                # 使用 WebClient 下载
-                $webClient = New-Object System.Net.WebClient
-                $webClient.DownloadFile($Url, $installerPath)
-                Write-LogMessage "SUCCESS" "下载完成: $installerPath"
-            }
-            catch {
-                Write-LogMessage "ERROR" "下载失败: $_"
-                return $false
-            }
         }
         else {
             Write-LogMessage "ERROR" "$Name 没有指定 path 或 url"
