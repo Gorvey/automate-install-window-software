@@ -24,11 +24,6 @@
   "installerApps": [
   ],
   "portableApps": [
-    {
-      "name": "Cheat Engine",
-      "path":"portable/Cheat Engine 7.6.zip",
-      "type":"zip",
-      "ignoreInstall":true
-    }
+
   ]
 }
