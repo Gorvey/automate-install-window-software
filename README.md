@@ -5,6 +5,7 @@
 ## 📚 文档导航
 
 - 📖 [快速开始指南](docs/QUICK-START.md) - 新手入门必看
+- 🔧 [前置依赖文档](docs/PREREQUISITES.md) - 环境准备和依赖说明
 - 📝 [更新日志](docs/CHANGELOG.md) - 版本更新记录
 - 📘 README.md - 完整文档（当前文档）
 
@@ -290,5 +291,6 @@ MIT License
 ## 📚 相关文档
 
 - [快速开始指南](docs/QUICK-START.md) - 5分钟快速上手
+- [前置依赖文档](docs/PREREQUISITES.md) - 环境准备和依赖说明
 - [更新日志](docs/CHANGELOG.md) - 查看版本变更
 
