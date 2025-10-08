@@ -14,7 +14,7 @@ param(
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
 # GitHub 仓库地址（请修改为你的仓库地址）
-$RepoUrl = "https://raw.githubusercontent.com/YOUR-USERNAME/automate-install-window-software/main"
+$RepoUrl = "https://raw.githubusercontent.com/Gorvey/automate-install-window-software/main"
 
 # 临时工作目录
 $TempDir = Join-Path $env:TEMP "windows-auto-install-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
