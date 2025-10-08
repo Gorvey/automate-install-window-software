@@ -1,37 +1,60 @@
-$Script:OperationLogPath = $null
-$Script:ErrorLogPath = $null
+# 日志模块
+$script:LogMessages = @()
+$script:LogPath = ""
 
-function Initialize-Logger {
+function Initialize-Log {
     param(
-        [string]$LogPath
+        [string]$LogDirectory
     )
-    $Timestamp = (Get-Date -Format "yyyyMMdd_HHmmss")
-    $null = New-Item -ItemType Directory -Force -Path $LogPath 2>$null
-    $Script:OperationLogPath = Join-Path $LogPath "AppDeploy_OperationLog_$Timestamp.txt"
-    $Script:ErrorLogPath = Join-Path $LogPath "AppDeploy_ErrorLog_$Timestamp.txt"
-    # --- 初始化操作日志 ($Timestamp) ---
-    "--- Initialize operation log ($Timestamp) ---" | Out-File $Script:OperationLogPath -Append -Encoding UTF8
-    # --- 初始化错误日志 ($Timestamp) ---
-    "--- Initialize error log ($Timestamp) ---" | Out-File $Script:ErrorLogPath -Append -Encoding UTF8
+    
+    $script:LogPath = $LogDirectory
+    
+    # 确保日志目录存在
+    if (-not (Test-Path $LogDirectory)) {
+        New-Item -ItemType Directory -Path $LogDirectory -Force | Out-Null
+    }
+    
+    $script:LogMessages = @()
+    Write-LogMessage "INFO" "日志系统已初始化"
 }
 
-function Write-Log {
+function Write-LogMessage {
     param(
-        [string]$Message,
-        [string]$Color = "White",
-        [bool]$IsError = $false,
-        [bool]$IsWarning = $false
+        [string]$Level,
+        [string]$Message
     )
-    $Time = Get-Date -Format 'HH:mm:ss'
-    $Line = "$Time :: $Message"
-    Write-Host $Line -ForegroundColor $Color
-    if ($Script:OperationLogPath) { $Line | Out-File $Script:OperationLogPath -Append -Encoding UTF8 }
-    if ($IsError -or $IsWarning) {
-        $prefix = ''
-        if ($IsError) { $prefix = '[ERROR] ' } else { $prefix = '[WARNING] ' }
-        $ErrLine = "$Time :: $prefix$Message"
-        if ($Script:ErrorLogPath) { $ErrLine | Out-File $Script:ErrorLogPath -Append -Encoding UTF8 }
+    
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logEntry = "[$timestamp] [$Level] $Message"
+    
+    # 添加到日志集合
+    $script:LogMessages += $logEntry
+    
+    # 根据级别使用不同颜色输出到控制台
+    switch ($Level) {
+        "INFO" { Write-Host $logEntry -ForegroundColor Green }
+        "WARN" { Write-Host $logEntry -ForegroundColor Yellow }
+        "ERROR" { Write-Host $logEntry -ForegroundColor Red }
+        "SUCCESS" { Write-Host $logEntry -ForegroundColor Cyan }
+        default { Write-Host $logEntry }
     }
 }
 
-Export-ModuleMember -Function Initialize-Logger, Write-Log
+function Save-Log {
+    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+    $logFileName = "install_log_$timestamp.txt"
+    $logFilePath = Join-Path $script:LogPath $logFileName
+    
+    try {
+        $script:LogMessages | Out-File -FilePath $logFilePath -Encoding UTF8
+        Write-LogMessage "SUCCESS" "日志已保存到: $logFilePath"
+        return $logFilePath
+    }
+    catch {
+        Write-Host "保存日志失败: $_" -ForegroundColor Red
+        return $null
+    }
+}
+
+Export-ModuleMember -Function Initialize-Log, Write-LogMessage, Save-Log
+

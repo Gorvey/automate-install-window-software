@@ -1,0 +1,31 @@
+{
+  "wingetApps": [
+    {
+      "name": "Git",
+      "id": "Git.Git"
+    }
+  ],
+  "installerApps": [
+    {
+      "name": "httrack",
+      "path":"httrack_x64-3.49.2.exe",
+      "silent": true,
+      "ignoreInstall":false
+    },
+    {
+      "name": "uTools",
+      "url":"https://open.u-tools.cn/download/uTools-7.2.1.exe",
+      "silent": true,
+      "ignoreInstall":true
+    }
+  ],
+  "portableApps": [
+    {
+      "name": "Cheat Engine",
+      "path":"portable/Cheat Engine 7.6.zip",
+      "type":"zip",
+      "ignoreInstall":true
+
+    }
+  ]
+}

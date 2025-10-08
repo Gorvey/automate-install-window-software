@@ -1,0 +1,12 @@
+{
+  "downloadDir": "C:\\Temp\\downloads",
+  "logPath": "C:\\Temp\\logs",
+  "portableAppsDir": "C:\\Temp\\portable",
+  "defaultWingetOptions": "-e -h --scope machine",
+  "proxy": {
+    "enabled": false,
+    "http": "http://127.0.0.1:7890",
+    "https": "http://127.0.0.1:7890"
+  }
+}
+
