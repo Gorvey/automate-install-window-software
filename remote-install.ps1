@@ -127,8 +127,36 @@ if (-not (Test-Path $RunScript)) {
 
 Push-Location $RepoDir
 try {
-    & $RunScript
-    $scriptExitCode = $LASTEXITCODE
+    $scriptExitCode = 0
+    
+    # 优先尝试使用 PowerShell 7
+    $pwshPath = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
+    
+    if ($pwshPath) {
+        Write-Host "[√] 使用 PowerShell 7 执行脚本（最佳 UTF-8 支持）" -ForegroundColor Green
+        Write-Host ""
+        & pwsh.exe -NoProfile -ExecutionPolicy Bypass -File $RunScript
+        $scriptExitCode = $LASTEXITCODE
+    }
+    # 检查是否有 PowerShell 7 在默认安装位置
+    elseif (Test-Path "C:\Program Files\PowerShell\7\pwsh.exe") {
+        Write-Host "[√] 使用默认位置的 PowerShell 7 执行脚本" -ForegroundColor Green
+        Write-Host ""
+        & "C:\Program Files\PowerShell\7\pwsh.exe" -NoProfile -ExecutionPolicy Bypass -File $RunScript
+        $scriptExitCode = $LASTEXITCODE
+    }
+    # 回退到 Windows PowerShell
+    else {
+        Write-Host "[!] 未找到 PowerShell 7，使用 Windows PowerShell 执行" -ForegroundColor Yellow
+        Write-Host "[!] 注意: 可能会出现中文字符编码问题" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "提示: 安装 PowerShell 7 以获得更好的体验" -ForegroundColor Gray
+        Write-Host "      运行: install-pwsh7.ps1" -ForegroundColor Gray
+        Write-Host "      文档: docs\QUICK-START.md" -ForegroundColor Gray
+        Write-Host ""
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $RunScript
+        $scriptExitCode = $LASTEXITCODE
+    }
 }
 catch {
     Write-Host ""
