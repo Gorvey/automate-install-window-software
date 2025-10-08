@@ -5,19 +5,23 @@
 #   iwr -useb https://your-domain.com/remote-install.ps1 | iex
 
 param(
-    [string]$ConfigUrl = "",  # 自定义配置文件URL
-    [switch]$SkipConfirm      # 跳过确认提示
+    [string]$Branch = "main",  # 指定分支，默认为 main
+    [switch]$SkipConfirm       # 跳过确认提示
 )
 
 # 设置控制台编码为 UTF-8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
-# GitHub 仓库地址（请修改为你的仓库地址）
-$RepoUrl = "https://raw.githubusercontent.com/Gorvey/automate-install-window-software/main"
+# GitHub 仓库信息（请修改为你的仓库地址）
+$RepoOwner = "Gorvey"
+$RepoName = "automate-install-window-software"
+$RepoZipUrl = "https://github.com/$RepoOwner/$RepoName/archive/refs/heads/$Branch.zip"
 
 # 临时工作目录
 $TempDir = Join-Path $env:TEMP "windows-auto-install-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+$ZipFile = Join-Path $TempDir "repo.zip"
+$ExtractDir = Join-Path $TempDir "extracted"
 
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "Windows 软件自动安装 - 远程执行模式" -ForegroundColor Cyan
@@ -44,7 +48,8 @@ if (-not $isAdmin) {
 if (-not $SkipConfirm) {
     Write-Host "[安全提示]" -ForegroundColor Yellow
     Write-Host "此脚本将从以下地址下载并执行代码：" -ForegroundColor White
-    Write-Host "  $RepoUrl" -ForegroundColor Cyan
+    Write-Host "  https://github.com/$RepoOwner/$RepoName" -ForegroundColor Cyan
+    Write-Host "  分支: $Branch" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "请确认你信任此来源！" -ForegroundColor Yellow
     Write-Host ""
@@ -56,95 +61,79 @@ if (-not $SkipConfirm) {
     Write-Host ""
 }
 
-Write-Host "[1/6] 创建临时工作目录..." -ForegroundColor Cyan
+Write-Host "[1/4] 创建临时工作目录..." -ForegroundColor Cyan
 New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
-Write-Host "工作目录: $TempDir" -ForegroundColor Gray
+New-Item -ItemType Directory -Path $ExtractDir -Force | Out-Null
+Write-Host "  ✓ 工作目录: $TempDir" -ForegroundColor Green
 Write-Host ""
 
-# 下载文件的辅助函数
-function Download-File {
-    param(
-        [string]$Url,
-        [string]$OutputPath,
-        [string]$Description
-    )
+Write-Host "[2/4] 下载仓库..." -ForegroundColor Cyan
+Write-Host "  下载地址: $RepoZipUrl" -ForegroundColor Gray
+try {
+    Invoke-WebRequest -Uri $RepoZipUrl -OutFile $ZipFile -UseBasicParsing -ErrorAction Stop
+    $zipSize = [math]::Round((Get-Item $ZipFile).Length / 1MB, 2)
+    Write-Host "  ✓ 下载完成 ($zipSize MB)" -ForegroundColor Green
+}
+catch {
+    Write-Host "  ✗ 下载失败: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "可能的原因：" -ForegroundColor Yellow
+    Write-Host "  1. 网络连接问题" -ForegroundColor Gray
+    Write-Host "  2. GitHub 访问受限" -ForegroundColor Gray
+    Write-Host "  3. 分支名称错误（当前分支: $Branch）" -ForegroundColor Gray
+    exit 1
+}
+Write-Host ""
+
+Write-Host "[3/4] 解压仓库..." -ForegroundColor Cyan
+try {
+    Expand-Archive -Path $ZipFile -DestinationPath $ExtractDir -Force -ErrorAction Stop
     
-    try {
-        Write-Host "  下载: $Description" -ForegroundColor Gray
-        Invoke-WebRequest -Uri $Url -OutFile $OutputPath -UseBasicParsing -ErrorAction Stop
-        Write-Host "  ✓ 完成: $Description" -ForegroundColor Green
-        return $true
+    # GitHub zip 解压后的目录名为 仓库名-分支名
+    $RepoDir = Join-Path $ExtractDir "$RepoName-$Branch"
+    
+    if (-not (Test-Path $RepoDir)) {
+        Write-Host "  ✗ 未找到预期的目录: $RepoDir" -ForegroundColor Red
+        Write-Host "  尝试查找实际目录..." -ForegroundColor Yellow
+        $actualDir = Get-ChildItem -Path $ExtractDir -Directory | Select-Object -First 1
+        if ($actualDir) {
+            $RepoDir = $actualDir.FullName
+            Write-Host "  找到目录: $RepoDir" -ForegroundColor Green
+        } else {
+            Write-Host "  ✗ 解压失败" -ForegroundColor Red
+            exit 1
+        }
     }
-    catch {
-        Write-Host "  ✗ 失败: $Description" -ForegroundColor Red
-        Write-Host "    错误: $($_.Exception.Message)" -ForegroundColor Red
-        return $false
-    }
+    
+    Write-Host "  ✓ 解压完成" -ForegroundColor Green
 }
-
-Write-Host "[2/6] 下载配置文件..." -ForegroundColor Cyan
-$configDir = Join-Path $TempDir "config"
-New-Item -ItemType Directory -Path $configDir -Force | Out-Null
-
-# 如果提供了自定义配置URL，使用它；否则使用默认的
-if ($ConfigUrl) {
-    $appsConfigUrl = $ConfigUrl
-} else {
-    $appsConfigUrl = "$RepoUrl/config/apps.json"
-}
-$settingsConfigUrl = "$RepoUrl/config/apps-settings.json"
-
-$success = $true
-$success = (Download-File -Url $appsConfigUrl -OutputPath "$configDir\apps.json" -Description "apps.json") -and $success
-$success = (Download-File -Url $settingsConfigUrl -OutputPath "$configDir\apps-settings.json" -Description "apps-settings.json") -and $success
-
-if (-not $success) {
-    Write-Host ""
-    Write-Host "[错误] 配置文件下载失败！" -ForegroundColor Red
+catch {
+    Write-Host "  ✗ 解压失败: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
 Write-Host ""
 
-Write-Host "[3/6] 下载脚本模块..." -ForegroundColor Cyan
-$scriptsDir = Join-Path $TempDir "scripts"
-New-Item -ItemType Directory -Path $scriptsDir -Force | Out-Null
-
-$success = $true
-$success = (Download-File -Url "$RepoUrl/scripts/log.psm1" -OutputPath "$scriptsDir\log.psm1" -Description "log.psm1") -and $success
-$success = (Download-File -Url "$RepoUrl/scripts/tool.psm1" -OutputPath "$scriptsDir\tool.psm1" -Description "tool.psm1") -and $success
-
-if (-not $success) {
-    Write-Host ""
-    Write-Host "[错误] 脚本模块下载失败！" -ForegroundColor Red
-    exit 1
-}
-Write-Host ""
-
-Write-Host "[4/6] 下载主脚本..." -ForegroundColor Cyan
-$success = Download-File -Url "$RepoUrl/scripts/run.ps1" -OutputPath "$scriptsDir\run.ps1" -Description "run.ps1"
-
-if (-not $success) {
-    Write-Host ""
-    Write-Host "[错误] 主脚本下载失败！" -ForegroundColor Red
-    exit 1
-}
-Write-Host ""
-
-Write-Host "[5/6] 创建必要的目录..." -ForegroundColor Cyan
-New-Item -ItemType Directory -Path "$TempDir\installer" -Force | Out-Null
-New-Item -ItemType Directory -Path "$TempDir\portable" -Force | Out-Null
-Write-Host "  ✓ installer/ 目录已创建" -ForegroundColor Green
-Write-Host "  ✓ portable/ 目录已创建" -ForegroundColor Green
-Write-Host ""
-
-Write-Host "[6/6] 开始执行安装脚本..." -ForegroundColor Cyan
+Write-Host "[4/4] 开始执行安装脚本..." -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 切换到临时目录并执行主脚本
-Push-Location $TempDir
+# 切换到仓库目录并执行主脚本
+$RunScript = Join-Path $RepoDir "scripts\run.ps1"
+
+if (-not (Test-Path $RunScript)) {
+    Write-Host "✗ 找不到安装脚本: $RunScript" -ForegroundColor Red
+    exit 1
+}
+
+Push-Location $RepoDir
 try {
-    & "$scriptsDir\run.ps1"
+    & $RunScript
+    $scriptExitCode = $LASTEXITCODE
+}
+catch {
+    Write-Host ""
+    Write-Host "✗ 脚本执行出错: $($_.Exception.Message)" -ForegroundColor Red
+    $scriptExitCode = 1
 }
 finally {
     Pop-Location
@@ -152,7 +141,11 @@ finally {
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "远程安装完成！" -ForegroundColor Green
+if ($scriptExitCode -eq 0 -or $null -eq $scriptExitCode) {
+    Write-Host "远程安装完成！" -ForegroundColor Green
+} else {
+    Write-Host "安装过程中出现错误（退出代码: $scriptExitCode）" -ForegroundColor Yellow
+}
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "临时文件位置: $TempDir" -ForegroundColor Gray
